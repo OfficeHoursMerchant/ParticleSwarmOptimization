@@ -4,17 +4,24 @@ using namespace std;
 #include <cmath>
 #include <time.h>
 
-
-double RNG();
+double RNG(int magnitude);
+double RNG(int low, int high);
 double calculator(double x, double y);
 
+int mag = 2; // Maximum magnitude of direction vectors 
+
+int lowx = -15; // Lower bound of the x domain
+int highx =15; // Upper bound of the x domain
+
+int lowy = -3; // Lower bound of the y range
+int highy = 3; // Upper bound of the y range
 
 static double teamBestX;
 static double teamBestY;
 static double teamBestZ;
 
 static double r = 0.8;
-static double c = 2;
+static double c = 1;
 
 
 // Makes class for the swarm/bird/particle objects
@@ -72,15 +79,12 @@ static double c = 2;
     };
    
 // Defining the class
-    // Constructors. Just so it lets me do custom constructor. 33.23 So if I get that value I know something weird is going on.
+    // Default constructor. 
+
     Bird::Bird()
-    : x(33.23), y(33.23), directionVectorX(33.23), directionVectorY(33.22)
-    {}
-    // Custom. This is the one I use
-    Bird::Bird(int x, int y)
-    : x(x), y(y), z(calculator(x, y)), // Initialzes x, y, and z coordinate based on inputs
-    personalBestX(x), personalBestY(y), personalBestZ(calculator(x,y)), // Initializes the personal best to its current coordinate.
-    directionVectorX(RNG()), directionVectorY(RNG())  // Initializes the direction vector to a random value
+    : x(RNG(lowx, highx)), y(RNG(lowy, highy)), z(calculator(x,y)),  // 1. Defines x and y "randomly" based on parameters, then finds the Z value at that point in the function.
+     directionVectorX(RNG(mag)), directionVectorY(RNG(mag)), // Defines the velocity vector randomly between [-mag, mag]
+     personalBestX(x), personalBestY(y), personalBestZ(z)
     {}
 
 
@@ -96,8 +100,8 @@ static double c = 2;
 
     // Updates the velocity. The weighted equation comes from the PSO definition.
     void Bird::updateVelocity(){
-        directionVectorX = (0.9)*(directionVectorX) + (c*r)*(personalBestX - x) + (c*r)*(teamBestX - x); 
-        directionVectorY = (0.9)*(directionVectorY) + (c*r)*(personalBestY - y) + (c*r)*(teamBestY - y);
+        directionVectorX = (0.95)*(directionVectorX) + (c*r)*(personalBestX - x) + (c*r)*(teamBestX - x); 
+        directionVectorY = (0.95)*(directionVectorY) + (c*r)*(personalBestY - y) + (c*r)*(teamBestY - y);
     }
 
     void Bird::personalBestUpdater(){ // Checks if the current Bird's value is lower than its personal best. If so, update ALL the personal best vals.
@@ -122,23 +126,19 @@ int main(){
     srand(time(NULL));
 
     // Initialize the swarm parameters
-    int swarmLength = 10;
-    int swarmHeight = 10;
-    static int swarmSize = (swarmLength*swarmHeight);
+    static int swarmSize = 20; // Clerc (textbook) recommends 20-40. At least for 3D?
     Bird* swarm[swarmSize];
 
-
-    int arrayCounter = -1; // so it can start at 0
-
-    // Fills 1D array with Bird objects (each one initialize at x, y), so it makes a grid. (Should be RNG)
-    for (int y = 0; y < swarmHeight; y++){
-        for (int x= 0; x < swarmLength; x++){
-            arrayCounter+=1;
-        swarm[arrayCounter] = new Bird(x, y); 
-     }
+    // Occupies array with default constructor (psuedorandom) Bird object pointers. Aka: an array filled with random "birds" (particles).
+    for (int i = 0; i<swarmSize; i++){ 
+        swarm[i] = new Bird();
     }
 
-// Sets the global best to the 1st bird. This is so it has a Z value to compare to for the following function.
+
+
+
+
+// Sets the global best to the 1st (0th) bird. This is so it has a Z value to compare to for the following function.
 teamBestX = swarm[0]->getX();
 teamBestY = swarm[0]->getY();
 teamBestZ = swarm[0]->getZ();
@@ -147,18 +147,23 @@ int turns = 1000;
 
 globalBest_function(swarmSize, swarm); // Iterates through the entire swarm and finds the global best. Does this so it can have an actual global Best
 
-
-
-for (int i = 0; i<turns; i++){ // This is the stopping condition
+swarm[0]->print();
+int counter = 0;
+//for (int i = 0; i<turns; i++){ // This is the stopping condition
+for(int i = 0; i<300; i++){
     for (int j = 0; j<swarmSize; j++){ // Per turn, iterate through entire swarm
      swarm[j]->updateVelocity(); 
      swarm[j]->move(); 
      swarm[j]->personalBestUpdater();
     }
+    counter += 1;
     globalBest_function(swarmSize, swarm); // updates global best (maybe i should rename) // At the end of every swarm turn, update the global. This is how it's supposed to be done,
-    // But it also allows for parallelization (Had the global best been updated as soon as it's found, then you could not do every swarm object in parallel per turn.)
+    // But it also allows for parallelization--had the global best been updated as soon as it's found, then you could not do every swarm object in parallel per turn.
 
 }
+
+swarm[0]->print();
+cout << endl << "Counter:" << counter;
 
 
 
@@ -169,23 +174,32 @@ return 0;} // Main end
 
 
 
-// functions ooo
+// Functions (ooohh)
 
 
-// Returns a random val between -1 and 1
-double RNG(){
-    double random = rand() % 201; // [0,200]
-    random -= 100; // [-100, 100]
-    random /= 100; // [-1, 1] 
+// Random (double) for the magnitude.
+double RNG(int magnitude){ // Multiplying by 100 then dividing by 100 allows for values to be floats... I.e [-0.35, 0.28] rather than [-1, 0]
+    double random = rand() % ((100*2*magnitude)+1); // will be between [0, 200*mag]
+    random -= 100*magnitude; // [-100mag, 100mag]
+    random /= 100;  // [-mag, mag], with two decimal points (-0.38, 2.37, etc.)
+    return random; 
+}
+
+
+// Random point within the range.
+double RNG(int low, int high){
+    int length = abs(low) + abs(high); 
+    double random = rand() % (length+1); // [0,length]
+    random -= low; // [low, high]
     return random; 
 }
 
 // Gets Z for f(x,y) given x, y
 double calculator(double x, double y){
-   // double z = pow((1.5 - x + x*y),2) + pow(2.25 - x + x* (pow(y,2)),2) + pow((2.625 - x + x * pow(y,3)),2); // Beale (3, 0.5, 0)
-  // double z = pow((pow(x, 2) + y - 11),2) + pow((x+ pow(y,2) - 7),2); // Himmelblau (four, but 3,2,0)
+   double z = pow((1.5 - x + x*y),2) + pow(2.25 - x + x* (pow(y,2)),2) + pow((2.625 - x + x * pow(y,3)),2); // Beale (3, 0.5, 0)
+   //double z = pow((pow(x, 2) + y - 11),2) + pow((x+ pow(y,2) - 7),2); // Himmelblau (four, but 3,2,0)
    //double z= 100 * pow(abs(y - 0.01 * (pow(x,2))),0.5) + 0.01 * abs(x+10); // bulkin function n.6 -10, 1 0
-  double z = pow((x + 2*y - 7),2) + pow((2*x + y -5),2);
+  //)
    return z;}
 
 
@@ -200,3 +214,5 @@ void globalBest_function(int s_size, Bird *array[]){
    }
 }
 
+
+// Ok, custom range and directional mag done. Looks like the local minima are trapping in Bukin No.6. But Beale and Himmelblau work fine.
