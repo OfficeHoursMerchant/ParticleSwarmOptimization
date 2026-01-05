@@ -3,7 +3,7 @@
 using namespace std;
 #include <cmath>
 #include <time.h>
-
+// Trying to figure out how git works lalala
 double RNG(int magnitude);
 double RNG(int low, int high);
 double calculator(double x, double y);
@@ -24,6 +24,7 @@ static double r = 0.8;
 static double c = 1;
 
 
+int test = 0;
 // Makes class for the swarm/bird/particle objects
   class Bird {
         double x;
