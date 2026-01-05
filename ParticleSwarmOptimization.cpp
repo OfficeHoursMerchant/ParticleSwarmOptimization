@@ -24,7 +24,9 @@ static double r = 0.8;
 static double c = 1;
 
 
-int test = 0;
+// HOW DO I DO THIS?~?~?!?!?!?!?!
+
+int test = 0; // I wrote all the code! but wrong email to push.. oops
 // Makes class for the swarm/bird/particle objects
   class Bird {
         double x;
